@@ -73,15 +73,6 @@ python app.py --setup
 python app.py
 ```
 
-Ask questions in plain English:
-
-```
-📊 Ask > What are the top 5 products by revenue?
-📊 Ask > Show me monthly order trends for 2025
-📊 Ask > Which customers have spent more than $500?
-📊 Ask > What is the cancellation rate by state?
-```
-
 ### Evaluation
 
 ```bash
