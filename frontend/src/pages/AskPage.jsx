@@ -1,9 +1,11 @@
 import { useEffect, useId, useRef } from 'react'
+import { useAuth } from '../app/AuthContext'
 import { useChat } from '../app/ChatContext'
 import ChatTurn from '../components/ChatTurn'
 import Composer from '../components/Composer'
 
 export default function AskPage() {
+  const { user } = useAuth()
   const { draft, setDraft, turns, busy, examples, runQuestion } = useChat()
   const feedRef = useRef(null)
   const titleId = useId()
@@ -29,7 +31,9 @@ export default function AskPage() {
         {turns.length === 0 ? (
           <section className="hero-empty">
             <p className="hero-empty__eyebrow">Your store at a glance</p>
-            <h2 className="hero-empty__title">Analytics Assistant</h2>
+            <h2 className="hero-empty__title">
+              {user?.name ? `Hi ${user.name.split(' ')[0]}` : 'Analytics Assistant'}
+            </h2>
             <p className="hero-empty__copy">
               Curious about products, orders, customers, or reviews? Ask in your
               own words and we’ll show a clear answer.

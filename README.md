@@ -59,6 +59,7 @@ Chroma collection `retrieval_docs` schema:
 AI-Agent-Analytics-Assistant/
 ├── app.py                # Interactive CLI entry point
 ├── api.py                # FastAPI server for the React frontend
+├── auth.py               # Accounts, sessions, per-user question history
 ├── sql_agent.py          # Core NL→SQL agent (Groq + execution)
 ├── context_manager.py    # Retrieval-augmented prompt builder
 ├── vector_store.py       # ChromaDB vector store + embeddings
@@ -114,21 +115,38 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173). Vite proxies `/api` to port 8000.
 
+On first visit you create an account (name, email, password) or sign in. Every
+question is recorded against the signed-in account.
+
+Signing up also creates a matching **customer** in `business.db` — a profile plus
+its own orders, items, and reviews — so personal questions work right away:
+“How much have I spent?”, “What have I ordered so far?”. The generated history is
+seeded from the email address, so an account always gets the same data back.
+
 **API routes**
+
+All routes except `/api/health` and the auth endpoints require a
+`Authorization: Bearer <token>` header.
 
 | Method | Path | Description |
 |--------|------|-------------|
+| `POST` | `/api/auth/signup` | `{ name, email, password }` → token + user |
+| `POST` | `/api/auth/login` | `{ email, password }` → token + user |
+| `POST` | `/api/auth/logout` | Revoke the current session token |
+| `GET` | `/api/auth/me` | Signed-in account |
 | `GET` | `/api/health` | Readiness, model, provider (`groq`) |
 | `GET` | `/api/examples` | Sample questions for the UI |
 | `GET` | `/api/schema` | Table / column metadata for Explore |
 | `POST` | `/api/ask` | `{ "question": "..." }` → result rows |
+| `GET` | `/api/history` | The signed-in user's past questions |
+| `DELETE` | `/api/history` | Clear the signed-in user's history |
 
 ### Frontend pages
 
 | Route | Page |
 |-------|------|
 | `/` | **Ask** — chat and answer tables |
-| `/history` | Session question history |
+| `/history` | That user's saved question history |
 | `/explore` | High-level order-management domain diagram |
 | `/about` | How the assistant works |
 
@@ -164,9 +182,12 @@ Default model: `llama-3.3-70b-versatile` (via Groq’s OpenAI-compatible API).
 - Local **ChromaDB** collection `retrieval_docs` (vectors, documents, and metadata together)
 - Embeddings via `sentence-transformers/all-MiniLM-L6-v2` (local, no API cost)
 - Indexes **schema descriptions** (introspected from SQLite) and **query history** (question→SQL pairs)
+- History documents carry a `user_id`, so few-shot retrieval only draws on shared seed
+  examples plus the asking user's own past questions
 - Persists under `.chroma/`
 
 ### Context manager (`context_manager.py`)
+- Injects the signed-in user's identity so “I / me / my” resolves to their `customers.email`
 - Retrieves top-k relevant schemas and few-shot examples per question
 - Builds the system prompt with schema context + similar examples
 - Feedback loop: successful queries are upserted back into Chroma
@@ -177,13 +198,21 @@ Default model: `llama-3.3-70b-versatile` (via Groq’s OpenAI-compatible API).
 - Executes SQL against SQLite and returns pandas DataFrames
 - Feeds successful pairs back into the vector store
 
+### Accounts (`auth.py`)
+- Separate SQLite file `accounts.db` — user data never mixes with the business dataset
+- Passwords hashed with PBKDF2-HMAC-SHA256 (200k iterations, per-user salt)
+- Opaque bearer tokens stored server-side in a `sessions` table, so sign-out revokes them
+- `query_history` table records each question against its author
+
 ### API (`api.py`)
 - FastAPI wrapper around `SQLAgent` for the React frontend
 - CORS enabled for local Vite (`localhost:5173`)
+- Data routes are behind a bearer-token dependency; `/api/ask` passes the user id down to the agent
 
 ### Frontend (`frontend/`)
-- React + Vite chat UI: ask questions, view generated SQL, browse result tables
-- Session history and example prompts in the sidebar
+- React + Vite UI gated behind a sign-in / sign-up screen
+- Token kept in `localStorage` and sent on every request; account shown in the sidebar
+- History page reads that user's questions back from the server
 
 ### Evaluation (`evaluate.py`)
 - 200+ test queries (aggregation, joins, filters, dates, subqueries)

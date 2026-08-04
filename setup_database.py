@@ -346,5 +346,115 @@ def build_database(db_path: str = DB_PATH, seed: int = 42) -> str:
     return db_path
 
 
+def split_name(full_name: str) -> tuple[str, str]:
+    parts = (full_name or "").strip().split()
+    if not parts:
+        return "Guest", ""
+    return parts[0], " ".join(parts[1:])
+
+
+def provision_customer(
+    full_name: str,
+    email: str,
+    db_path: str = DB_PATH,
+    num_orders: int = 7,
+    num_reviews: int = 5,
+) -> int | None:
+    """
+    Give a signed-up account a real presence in the business data: one customer
+    row plus their own orders, order items, and reviews. Existing customers are
+    returned untouched, so this is safe to call on every sign-in.
+
+    Returns the customer_id, or None if the business database isn't built yet.
+    """
+    if not os.path.exists(db_path):
+        return None
+
+    email = email.strip().lower()
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+
+    cur.execute("SELECT customer_id FROM customers WHERE email = ?", (email,))
+    existing = cur.fetchone()
+    if existing:
+        conn.close()
+        return existing[0]
+
+    # Seeded off the email so a given account always gets the same history
+    rng = random.Random(email)
+
+    first, last = split_name(full_name)
+    city, state = rng.choice(CITIES_STATES)
+    signup = _random_date(datetime(2023, 1, 1), datetime(2025, 6, 30))
+
+    cur.execute("SELECT COALESCE(MAX(customer_id), 0) + 1 FROM customers")
+    cid = cur.fetchone()[0]
+    cur.execute(
+        "INSERT INTO customers VALUES (?,?,?,?,?,?,?)",
+        (cid, first, last, email, city, state, signup),
+    )
+
+    cur.execute("SELECT product_id, unit_price FROM products")
+    catalog = cur.fetchall()
+    if not catalog:
+        conn.commit()
+        conn.close()
+        return cid
+
+    cur.execute("SELECT COALESCE(MAX(order_id), 0) + 1 FROM orders")
+    oid = cur.fetchone()[0]
+    cur.execute("SELECT COALESCE(MAX(item_id), 0) + 1 FROM order_items")
+    iid = cur.fetchone()[0]
+
+    statuses = ["pending", "shipped", "delivered", "delivered", "delivered", "cancelled"]
+    order_start = max(datetime.fromisoformat(signup), datetime(2023, 1, 1))
+
+    bought: set[int] = set()
+    for _ in range(num_orders):
+        chosen = rng.sample(catalog, k=min(rng.randint(1, 4), len(catalog)))
+        total = 0.0
+        for product_id, unit_price in chosen:
+            qty = rng.randint(1, 3)
+            line = round(unit_price * qty, 2)
+            cur.execute(
+                "INSERT INTO order_items VALUES (?,?,?,?,?,?)",
+                (iid, oid, product_id, qty, unit_price, line),
+            )
+            total += line
+            bought.add(product_id)
+            iid += 1
+        cur.execute(
+            "INSERT INTO orders VALUES (?,?,?,?,?)",
+            (
+                oid,
+                cid,
+                _random_date(order_start, datetime(2025, 12, 31)),
+                rng.choice(statuses),
+                round(total, 2),
+            ),
+        )
+        oid += 1
+
+    # Only review products this customer actually ordered
+    cur.execute("SELECT COALESCE(MAX(review_id), 0) + 1 FROM reviews")
+    rid = cur.fetchone()[0]
+    for product_id in rng.sample(sorted(bought), k=min(num_reviews, len(bought))):
+        cur.execute(
+            "INSERT INTO reviews VALUES (?,?,?,?,?)",
+            (
+                rid,
+                product_id,
+                cid,
+                rng.choices([2, 3, 4, 5], weights=[10, 20, 40, 30])[0],
+                _random_date(order_start, datetime(2025, 12, 31)),
+            ),
+        )
+        rid += 1
+
+    conn.commit()
+    conn.close()
+    return cid
+
+
 if __name__ == "__main__":
     build_database()

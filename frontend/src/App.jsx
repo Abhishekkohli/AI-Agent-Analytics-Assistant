@@ -1,27 +1,13 @@
-import { useEffect, useState } from 'react'
-import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom'
+import { useState } from 'react'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { AuthProvider, useAuth } from './app/AuthContext'
 import { ChatProvider, useChat } from './app/ChatContext'
 import Sidebar from './components/Sidebar'
 import AskPage from './pages/AskPage'
+import AuthPage from './pages/AuthPage'
 import HistoryPage from './pages/HistoryPage'
 import ExplorePage from './pages/ExplorePage'
 import AboutPage from './pages/AboutPage'
-
-function AskWithFocus() {
-  const [params, setParams] = useSearchParams()
-  const focus = params.get('focus')
-
-  useEffect(() => {
-    if (!focus) return
-    const node = document.getElementById(`turn-${focus}`)
-    if (node) {
-      node.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      setParams({}, { replace: true })
-    }
-  }, [focus, setParams])
-
-  return <AskPage />
-}
 
 function Shell() {
   const { online } = useChat()
@@ -57,7 +43,7 @@ function Shell() {
         </button>
 
         <Routes>
-          <Route path="/" element={<AskWithFocus />} />
+          <Route path="/" element={<AskPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/explore" element={<ExplorePage />} />
           <Route path="/about" element={<AboutPage />} />
@@ -68,10 +54,31 @@ function Shell() {
   )
 }
 
-export default function App() {
+function Gate() {
+  const { user, checking } = useAuth()
+
+  if (checking) {
+    return (
+      <div className="auth-screen">
+        <div className="atmosphere" aria-hidden="true" />
+        <p className="empty-note">Loading…</p>
+      </div>
+    )
+  }
+
+  if (!user) return <AuthPage />
+
   return (
     <ChatProvider>
       <Shell />
     </ChatProvider>
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <Gate />
+    </AuthProvider>
   )
 }

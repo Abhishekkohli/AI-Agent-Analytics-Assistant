@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { useAuth } from '../app/AuthContext'
 
 const NAV = [
   { to: '/', label: 'Ask', end: true },
@@ -7,7 +8,18 @@ const NAV = [
   { to: '/about', label: 'About' },
 ]
 
+function initials(name) {
+  return (name || '?')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || '')
+    .join('')
+}
+
 export default function Sidebar({ online, open, onClose }) {
+  const { user, signOut } = useAuth()
+
   return (
     <aside className={`sidebar ${open ? 'sidebar--open' : ''}`}>
       <div className="sidebar__brand">
@@ -43,6 +55,19 @@ export default function Sidebar({ online, open, onClose }) {
           </NavLink>
         ))}
       </nav>
+
+      <div className="sidebar__account">
+        <div className="sidebar__avatar" aria-hidden="true">
+          {initials(user?.name)}
+        </div>
+        <div className="sidebar__account-info">
+          <p className="sidebar__account-name">{user?.name}</p>
+          <p className="sidebar__account-email">{user?.email}</p>
+        </div>
+        <button type="button" className="text-btn" onClick={signOut}>
+          Sign out
+        </button>
+      </div>
     </aside>
   )
 }

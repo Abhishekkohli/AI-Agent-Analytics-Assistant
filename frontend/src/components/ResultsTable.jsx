@@ -8,16 +8,34 @@ function formatCell(value) {
   return String(value)
 }
 
+function isIdColumn(name) {
+  const n = String(name || '').trim().toLowerCase()
+  return n === 'id' || n.endsWith('_id')
+}
+
+/** Drop id / *_id columns so internal keys never appear in the UI. */
+function withoutIdColumns(columns, rows) {
+  const keep = columns
+    .map((col, i) => ({ col, i }))
+    .filter(({ col }) => !isIdColumn(col))
+  return {
+    columns: keep.map(({ col }) => col),
+    rows: rows.map((row) => keep.map(({ i }) => row[i])),
+  }
+}
+
 export default function ResultsTable({ columns, rows, rowCount }) {
-  if (!columns?.length) {
+  const safe = withoutIdColumns(columns || [], rows || [])
+
+  if (!safe.columns.length) {
     return <p className="empty-note">Nothing to show for that question.</p>
   }
 
-  if (!rows?.length) {
+  if (!safe.rows.length) {
     return <p className="empty-note">No matching results.</p>
   }
 
-  const shown = rows.length
+  const shown = safe.rows.length
   const truncated = rowCount > shown
 
   return (
@@ -32,13 +50,13 @@ export default function ResultsTable({ columns, rows, rowCount }) {
         <table>
           <thead>
             <tr>
-              {columns.map((col) => (
+              {safe.columns.map((col) => (
                 <th key={col}>{col}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => (
+            {safe.rows.map((row, i) => (
               <tr key={i}>
                 {row.map((cell, j) => (
                   <td key={j}>{formatCell(cell)}</td>

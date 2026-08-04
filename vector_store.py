@@ -75,6 +75,7 @@ class VectorStore:
                 meta["table"] = str(meta_in.get("table", ""))
                 meta["question"] = ""
                 meta["sql"] = ""
+                meta["user_id"] = ""
                 doc_id = f"schema::{meta['table']}" if meta["table"] else f"schema::{uuid.uuid4().hex}"
             else:
                 question = str(meta_in.get("question", ""))
@@ -82,6 +83,8 @@ class VectorStore:
                 meta["table"] = ""
                 meta["question"] = question
                 meta["sql"] = sql
+                # "" marks shared seed examples; otherwise the owning account
+                meta["user_id"] = str(meta_in.get("user_id", ""))
                 # Stable-ish id for seeds; unique id for runtime feedback
                 doc_id = meta_in.get("id") or f"history::{uuid.uuid4().hex}"
 
@@ -111,10 +114,14 @@ class VectorStore:
         query: str,
         top_k: int = 5,
         doc_type: str | None = None,
+        user_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """
         Return the top-k most relevant documents for `query`.
         Optionally filter by doc_type ('schema' or 'history').
+
+        When `user_id` is given, history matches are limited to shared seed
+        examples plus that account's own past questions.
         """
         if self.collection.count() == 0:
             return []
@@ -124,8 +131,16 @@ class VectorStore:
             "n_results": min(top_k, self.collection.count()),
             "include": ["documents", "metadatas", "distances"],
         }
+
+        clauses: list[dict[str, Any]] = []
         if doc_type:
-            kwargs["where"] = {"doc_type": doc_type}
+            clauses.append({"doc_type": doc_type})
+        if user_id is not None:
+            clauses.append({"user_id": {"$in": ["", str(user_id)]}})
+        if len(clauses) == 1:
+            kwargs["where"] = clauses[0]
+        elif clauses:
+            kwargs["where"] = {"$and": clauses}
 
         raw = self.collection.query(**kwargs)
         results: list[dict[str, Any]] = []
@@ -146,6 +161,7 @@ class VectorStore:
                         "table": meta.get("table", ""),
                         "question": meta.get("question", ""),
                         "sql": meta.get("sql", ""),
+                        "user_id": meta.get("user_id", ""),
                     },
                     "score": score,
                 }

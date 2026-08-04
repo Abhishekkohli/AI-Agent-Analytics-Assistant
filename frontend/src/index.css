@@ -248,6 +248,161 @@ button {
   padding: 0;
 }
 
+.text-btn--ink {
+  color: var(--panel);
+  font-size: 0.9rem;
+  text-decoration: underline;
+}
+
+/* ── Sign in / sign up ─────────────────────────────────────────── */
+
+.auth-screen {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+
+.auth-card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 26rem);
+  padding: 1.75rem 1.6rem 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow);
+  animation: rise 0.5s ease both;
+}
+
+.auth-card__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.4rem;
+}
+
+.brand-name--ink {
+  color: var(--panel);
+}
+
+.auth-card__tag {
+  margin: 0.1rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.auth-card__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  letter-spacing: -0.03em;
+  color: var(--panel);
+}
+
+.auth-card__copy {
+  margin: 0.4rem 0 1.25rem;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.auth-field span {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.auth-field input {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-field input:focus {
+  border-color: rgba(11, 61, 58, 0.35);
+  box-shadow: 0 0 0 3px rgba(125, 211, 199, 0.35);
+}
+
+.auth-submit {
+  margin-top: 0.25rem;
+  width: 100%;
+}
+
+.auth-switch {
+  margin: 1.1rem 0 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* ── Account block in the sidebar ──────────────────────────────── */
+
+.sidebar__account {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar__avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  background: rgba(125, 211, 199, 0.22);
+  color: var(--mint);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.sidebar__account-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.sidebar__account-name,
+.sidebar__account-email {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar__account-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--panel-ink);
+}
+
+.sidebar__account-email {
+  font-size: 0.75rem;
+  color: var(--panel-muted);
+}
+
 .ghost-btn {
   color: var(--mint);
   padding: 0.2rem 0.4rem;

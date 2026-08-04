@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { askQuestion, fetchExamples, fetchHealth } from '../api'
+import { useAuth } from './AuthContext'
 
 const FALLBACK_EXAMPLES = [
   'What are the top 5 products by total revenue?',
@@ -13,13 +14,18 @@ const ChatContext = createContext(null)
 let turnSeq = 0
 
 export function ChatProvider({ children }) {
+  const { user } = useAuth()
   const [draft, setDraft] = useState('')
   const [turns, setTurns] = useState([])
   const [busy, setBusy] = useState(false)
   const [examples, setExamples] = useState(FALLBACK_EXAMPLES)
   const [online, setOnline] = useState(false)
-  const [model, setModel] = useState('')
-  const [provider, setProvider] = useState('')
+
+  // Answers belong to whoever is signed in, so reset when the account changes
+  useEffect(() => {
+    setTurns([])
+    setDraft('')
+  }, [user?.id])
 
   useEffect(() => {
     let cancelled = false
@@ -32,8 +38,6 @@ export function ChatProvider({ children }) {
         ])
         if (cancelled) return
         setOnline(health.status === 'ok')
-        setModel(health.model || '')
-        setProvider(health.provider || '')
         if (ex.examples?.length) setExamples(ex.examples)
       } catch {
         if (!cancelled) setOnline(false)
@@ -46,7 +50,7 @@ export function ChatProvider({ children }) {
       cancelled = true
       window.clearInterval(id)
     }
-  }, [])
+  }, [user?.id])
 
   const runQuestion = useCallback(async (question) => {
     const q = question.trim()
@@ -77,7 +81,7 @@ export function ChatProvider({ children }) {
     }
   }, [busy])
 
-  const clearHistory = useCallback(() => setTurns([]), [])
+  const clearTurns = useCallback(() => setTurns([]), [])
 
   const value = useMemo(
     () => ({
@@ -87,12 +91,10 @@ export function ChatProvider({ children }) {
       busy,
       examples,
       online,
-      model,
-      provider,
       runQuestion,
-      clearHistory,
+      clearTurns,
     }),
-    [draft, turns, busy, examples, online, model, provider, runQuestion, clearHistory],
+    [draft, turns, busy, examples, online, runQuestion, clearTurns],
   )
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>

@@ -24,17 +24,17 @@ export default function AboutPage() {
           </p>
         </section>
         <section className="about-block">
-          <h2>Understand your store</h2>
+          <h2>Ask about yourself</h2>
           <p>
-            Explore how customers, orders, products, and reviews fit together in
-            your sample online store.
+            You have your own orders and reviews in the store, so you can ask
+            things like how much you’ve spent or what you bought last.
           </p>
         </section>
         <section className="about-block">
           <h2>Come back to past questions</h2>
           <p>
-            History keeps the questions you’ve already asked in this session, so
-            you can reopen or ask them again anytime.
+            History keeps every question you’ve asked, so you can revisit or ask
+            them again whenever you like.
           </p>
         </section>
       </div>

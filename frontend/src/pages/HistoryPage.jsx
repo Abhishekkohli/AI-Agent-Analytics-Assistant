@@ -1,17 +1,52 @@
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { clearHistory, fetchHistory } from '../api'
+import { useAuth } from '../app/AuthContext'
 import { useChat } from '../app/ChatContext'
 
-function statusLabel(turn) {
-  if (turn.status === 'loading') return 'Running'
-  if (turn.status === 'error') return 'Failed'
-  if (turn.result?.error) return 'Failed'
-  const n = turn.result?.row_count ?? 0
-  return n === 1 ? '1 result' : `${n} results`
+function resultLabel(item) {
+  if (!item.succeeded) return 'No answer'
+  return item.row_count === 1 ? '1 result' : `${item.row_count} results`
+}
+
+function formatWhen(iso) {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
 }
 
 export default function HistoryPage() {
-  const { turns, clearHistory, runQuestion, busy } = useChat()
+  const { user } = useAuth()
+  const { runQuestion, busy } = useChat()
   const navigate = useNavigate()
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const load = useCallback(async () => {
+    try {
+      setItems(await fetchHistory())
+      setError('')
+    } catch (err) {
+      setError(err.message || 'Could not load your history')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load, user?.id])
+
+  async function handleClear() {
+    await clearHistory()
+    setItems([])
+  }
 
   return (
     <div className="page page--pad">
@@ -20,45 +55,48 @@ export default function HistoryPage() {
           <h1 className="workspace__brand">History</h1>
           <p className="workspace__sub">Questions you’ve already asked</p>
         </div>
-        {turns.length > 0 && (
-          <button type="button" className="secondary-btn" onClick={clearHistory}>
+        {items.length > 0 && (
+          <button type="button" className="secondary-btn" onClick={handleClear}>
             Clear all
           </button>
         )}
       </header>
 
-      {turns.length === 0 ? (
+      {loading && <p className="empty-note">Loading…</p>}
+
+      {error && (
+        <div className="error-banner" role="alert">
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && items.length === 0 && (
         <div className="empty-panel">
           <p>No questions yet.</p>
           <button type="button" className="send-btn" onClick={() => navigate('/')}>
             Ask something
           </button>
         </div>
-      ) : (
+      )}
+
+      {items.length > 0 && (
         <ul className="history-panel">
-          {[...turns].reverse().map((turn, index) => (
-            <li key={turn.id} className="history-panel__item">
+          {items.map((item) => (
+            <li key={item.id} className="history-panel__item">
               <div>
-                <p className="history-panel__q">{turn.question}</p>
+                <p className="history-panel__q">{item.question}</p>
                 <p className="history-panel__meta">
-                  #{turns.length - index} · {statusLabel(turn)}
+                  {formatWhen(item.created_at)} · {resultLabel(item)}
                 </p>
               </div>
               <div className="history-panel__actions">
                 <button
                   type="button"
                   className="ghost-btn ghost-btn--ink"
-                  onClick={() => navigate(`/?focus=${turn.id}`)}
-                >
-                  View
-                </button>
-                <button
-                  type="button"
-                  className="ghost-btn ghost-btn--ink"
                   disabled={busy}
                   onClick={async () => {
-                    await runQuestion(turn.question)
                     navigate('/')
+                    await runQuestion(item.question)
                   }}
                 >
                   Ask again

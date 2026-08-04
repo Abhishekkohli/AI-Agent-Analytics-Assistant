@@ -5,6 +5,7 @@ __pycache__/
 .vector_store/
 .chroma/
 business.db
+accounts.db
 eval_results.json
 .DS_Store
 frontend/node_modules/

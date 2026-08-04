@@ -67,9 +67,16 @@ class SQLAgent:
 
     # ── Public API ─────────────────────────────────────────────────
 
-    def ask(self, question: str) -> dict[str, Any]:
+    def ask(
+        self,
+        question: str,
+        user_id: str | None = None,
+        identity: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Full pipeline: question → SQL → execute → result dict.
+        `user_id` keeps retrieved examples and stored history per account, and
+        `identity` ({"name", "email"}) resolves first-person questions.
         Returns:
           {
             "question": str,
@@ -80,7 +87,7 @@ class SQLAgent:
             "error": str | None,
           }
         """
-        messages = self.ctx.build_prompt(question)
+        messages = self.ctx.build_prompt(question, user_id, identity)
 
         if self.verbose:
             print(f"\n[Context] System prompt length: {len(messages[0]['content'])} chars")
@@ -97,7 +104,7 @@ class SQLAgent:
 
         # Feed successful queries back into the store for future retrieval
         if result["error"] is None:
-            self.ctx.add_to_history(question, sql)
+            self.ctx.add_to_history(question, sql, user_id)
 
         return result
 
