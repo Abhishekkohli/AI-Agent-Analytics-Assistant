@@ -45,7 +45,7 @@ export default function ExplorePage() {
         <div>
           <h1 className="workspace__brand">Explore</h1>
           <p className="workspace__sub">
-            High-level view of the order-management domain — not the raw database schema
+            High-level view of the order-management domain
           </p>
         </div>
       </header>
