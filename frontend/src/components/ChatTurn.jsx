@@ -1,4 +1,3 @@
-import SqlBlock from './SqlBlock'
 import ResultsTable from './ResultsTable'
 
 export default function ChatTurn({ turn }) {
@@ -19,7 +18,7 @@ export default function ChatTurn({ turn }) {
             <span className="thinking__dot" />
             <span className="thinking__dot" />
             <span className="thinking__dot" />
-            <span className="thinking__label">Writing SQL and querying…</span>
+            <span className="thinking__label">Looking up your answer…</span>
           </div>
         )}
 
@@ -31,10 +30,9 @@ export default function ChatTurn({ turn }) {
 
         {status === 'done' && result && (
           <div className="turn__body">
-            {result.sql && <SqlBlock sql={result.sql} />}
             {result.error ? (
               <div className="error-banner" role="alert">
-                SQL error: {result.error}
+                Couldn’t answer that question. Try rephrasing it.
               </div>
             ) : (
               <ResultsTable
