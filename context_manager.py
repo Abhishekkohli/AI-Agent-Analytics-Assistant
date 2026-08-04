@@ -82,8 +82,9 @@ class ContextManager:
 
     def add_to_history(self, question: str, sql: str) -> None:
         """
-        Add a successful (question, SQL) pair to the vector store at
+        Add a successful (question, SQL) pair to the vector DB at
         runtime so the agent improves as the session progresses.
+        Chroma upserts embeddings + metadata together (no separate rebuild).
         """
         doc = {
             "text": f"Question: {question}\nSQL: {sql}",
@@ -91,5 +92,3 @@ class ContextManager:
             "metadata": {"question": question, "sql": sql},
         }
         self.store.add_documents([doc])
-        # Rebuild index to include the new document (cheap for small stores)
-        self.store.build_index()

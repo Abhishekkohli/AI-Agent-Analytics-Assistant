@@ -98,7 +98,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="AI Agent Analytics Assistant")
     parser.add_argument("--setup", action="store_true", help="Initialise DB + vector store")
     parser.add_argument("--eval", type=int, metavar="N", help="Run evaluation on N queries")
-    parser.add_argument("--model", type=str, default="gpt-4o-mini", help="OpenAI model name")
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="llama-3.3-70b-versatile",
+        help="Groq model name (e.g. llama-3.3-70b-versatile, llama-3.1-8b-instant)",
+    )
     parser.add_argument("--verbose", action="store_true", help="Show debug info")
     args = parser.parse_args()
 

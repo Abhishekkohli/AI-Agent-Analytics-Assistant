@@ -19,12 +19,14 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 from context_manager import ContextManager
-from vector_store import VectorStore, build_vector_store, schema_docs_from_db
+from vector_store import VectorStore, build_vector_store
 from setup_database import DB_PATH
 
 load_dotenv()
 
-DEFAULT_MODEL = "gpt-4o-mini"
+# Groq free-tier models (OpenAI-compatible API)
+DEFAULT_MODEL = "llama-3.3-70b-versatile"
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
 
 class SQLAgent:
@@ -39,17 +41,29 @@ class SQLAgent:
         self.db_path = db_path
         self.model = model
         self.verbose = verbose
-        self.client = OpenAI()  # reads OPENAI_API_KEY from env
+        # Lazy client so the API can boot without a key (ask() fails clearly later)
+        self._client: OpenAI | None = None
 
-        # Initialise or load vector store
-        store_dir = os.path.join(os.path.dirname(__file__), ".vector_store")
-        self.store = VectorStore()
-        if os.path.exists(os.path.join(store_dir, "index.faiss")):
-            self.store.load(store_dir)
+        # Load Chroma vector DB, or build schema + seed history on first run
+        if VectorStore.is_ready():
+            self.store = VectorStore()
         else:
             self.store = build_vector_store(db_path)
 
         self.ctx = ContextManager(self.store)
+
+    @property
+    def client(self) -> OpenAI:
+        if self._client is None:
+            api_key = os.getenv("GROQ_API_KEY")
+            if not api_key:
+                raise RuntimeError(
+                    "Missing GROQ_API_KEY. Get a free key at https://console.groq.com/keys "
+                    "and add it to your .env file."
+                )
+            # Same OpenAI SDK, pointed at Groq's compatible endpoint
+            self._client = OpenAI(api_key=api_key, base_url=GROQ_BASE_URL)
+        return self._client
 
     # ── Public API ─────────────────────────────────────────────────
 

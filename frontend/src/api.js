@@ -34,3 +34,11 @@ export async function fetchHealth() {
   }
   return res.json()
 }
+
+export async function fetchSchema() {
+  const res = await fetch('/api/schema')
+  if (!res.ok) {
+    throw new Error(await parseError(res))
+  }
+  return res.json()
+}

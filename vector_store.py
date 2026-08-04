@@ -1,47 +1,108 @@
 """
-FAISS-backed vector store for embedding-based retrieval.
-Indexes two types of documents:
-  1. Schema descriptions  – table/column metadata for the database
-  2. Query history        – past (question, SQL) pairs for few-shot context
+ChromaDB-backed vector store for embedding-based retrieval.
 
-Uses sentence-transformers for local embedding (no API key needed).
+Collection schema (`retrieval_docs`):
+  - id          : string primary key
+  - document    : text that is embedded (schema blurb or Q→SQL pair)
+  - embedding   : vector (auto-generated via sentence-transformers)
+  - metadata    :
+      doc_type  : "schema" | "history"
+      table     : table name (schema docs)
+      question  : natural-language question (history docs)
+      sql       : SQL string (history docs)
+
+Unlike FAISS, Chroma stores vectors + documents + metadata together.
 """
 
-import json
-import os
-import numpy as np
-import faiss
-from sentence_transformers import SentenceTransformer
+from __future__ import annotations
 
-STORE_DIR = os.path.join(os.path.dirname(__file__), ".vector_store")
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"  # 384-dim, fast, good quality
+import os
+import uuid
+from typing import Any
+
+import chromadb
+from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
+
+STORE_DIR = os.path.join(os.path.dirname(__file__), ".chroma")
+COLLECTION_NAME = "retrieval_docs"
+EMBEDDING_MODEL = "all-MiniLM-L6-v2"  # 384-dim, local, no API key
+
+
+def _embedding_fn() -> SentenceTransformerEmbeddingFunction:
+    return SentenceTransformerEmbeddingFunction(model_name=EMBEDDING_MODEL)
 
 
 class VectorStore:
-    def __init__(self, model_name: str = EMBEDDING_MODEL):
-        self.model = SentenceTransformer(model_name)
-        self.dim = self.model.get_sentence_embedding_dimension()
-        self.index: faiss.IndexFlatIP | None = None  # inner-product (cosine after norm)
-        self.documents: list[dict] = []
+    """Persistent Chroma collection for schema + query-history retrieval."""
 
-    # ── Build ──────────────────────────────────────────────────────
+    def __init__(self, persist_dir: str = STORE_DIR):
+        self.persist_dir = persist_dir
+        os.makedirs(persist_dir, exist_ok=True)
+        self.client = chromadb.PersistentClient(path=persist_dir)
+        self.collection = self.client.get_or_create_collection(
+            name=COLLECTION_NAME,
+            embedding_function=_embedding_fn(),
+            metadata={
+                "hnsw:space": "cosine",
+                "description": "Schema descriptions and NL→SQL few-shot history",
+            },
+        )
 
-    def add_documents(self, docs: list[dict]) -> None:
+    # ── Write ──────────────────────────────────────────────────────
+
+    def add_documents(self, docs: list[dict[str, Any]]) -> None:
         """
+        Upsert documents into Chroma.
+
         Each doc dict should have:
           - 'text': string to embed
           - 'type': 'schema' | 'history'
           - 'metadata': arbitrary dict (table name, SQL, etc.)
         """
-        self.documents.extend(docs)
+        if not docs:
+            return
 
-    def build_index(self) -> None:
-        """Encode all documents and build the FAISS index."""
-        texts = [d["text"] for d in self.documents]
-        embeddings = self.model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
-        embeddings = np.array(embeddings, dtype="float32")
-        self.index = faiss.IndexFlatIP(self.dim)
-        self.index.add(embeddings)
+        ids: list[str] = []
+        documents: list[str] = []
+        metadatas: list[dict[str, Any]] = []
+
+        for doc in docs:
+            doc_type = doc["type"]
+            meta_in = doc.get("metadata") or {}
+            # Chroma metadata values must be str/int/float/bool
+            meta: dict[str, Any] = {"doc_type": doc_type}
+            if doc_type == "schema":
+                meta["table"] = str(meta_in.get("table", ""))
+                meta["question"] = ""
+                meta["sql"] = ""
+                doc_id = f"schema::{meta['table']}" if meta["table"] else f"schema::{uuid.uuid4().hex}"
+            else:
+                question = str(meta_in.get("question", ""))
+                sql = str(meta_in.get("sql", ""))
+                meta["table"] = ""
+                meta["question"] = question
+                meta["sql"] = sql
+                # Stable-ish id for seeds; unique id for runtime feedback
+                doc_id = meta_in.get("id") or f"history::{uuid.uuid4().hex}"
+
+            ids.append(str(doc_id))
+            documents.append(doc["text"])
+            metadatas.append(meta)
+
+        # upsert so re-running setup refreshes schema docs cleanly
+        self.collection.upsert(ids=ids, documents=documents, metadatas=metadatas)
+
+    def clear(self) -> None:
+        """Drop and recreate the collection (used by full rebuild)."""
+        self.client.delete_collection(COLLECTION_NAME)
+        self.collection = self.client.get_or_create_collection(
+            name=COLLECTION_NAME,
+            embedding_function=_embedding_fn(),
+            metadata={
+                "hnsw:space": "cosine",
+                "description": "Schema descriptions and NL→SQL few-shot history",
+            },
+        )
 
     # ── Retrieve ───────────────────────────────────────────────────
 
@@ -50,44 +111,62 @@ class VectorStore:
         query: str,
         top_k: int = 5,
         doc_type: str | None = None,
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """
         Return the top-k most relevant documents for `query`.
         Optionally filter by doc_type ('schema' or 'history').
         """
-        if self.index is None:
-            raise RuntimeError("Index not built — call build_index() first")
+        if self.collection.count() == 0:
+            return []
 
-        q_vec = self.model.encode([query], normalize_embeddings=True).astype("float32")
+        kwargs: dict[str, Any] = {
+            "query_texts": [query],
+            "n_results": min(top_k, self.collection.count()),
+            "include": ["documents", "metadatas", "distances"],
+        }
+        if doc_type:
+            kwargs["where"] = {"doc_type": doc_type}
 
-        # Retrieve more than top_k so filtering by type still yields enough results
-        fetch_k = min(top_k * 3, self.index.ntotal)
-        scores, ids = self.index.search(q_vec, fetch_k)
+        raw = self.collection.query(**kwargs)
+        results: list[dict[str, Any]] = []
 
-        results = []
-        for score, idx in zip(scores[0], ids[0]):
-            if idx == -1:
-                continue
-            doc = self.documents[idx]
-            if doc_type and doc["type"] != doc_type:
-                continue
-            results.append({**doc, "score": float(score)})
-            if len(results) >= top_k:
-                break
+        docs = (raw.get("documents") or [[]])[0]
+        metas = (raw.get("metadatas") or [[]])[0]
+        dists = (raw.get("distances") or [[]])[0]
+
+        for text, meta, dist in zip(docs, metas, dists):
+            meta = meta or {}
+            # cosine distance → similarity-like score for callers
+            score = 1.0 - float(dist) if dist is not None else 0.0
+            results.append(
+                {
+                    "text": text or "",
+                    "type": meta.get("doc_type", doc_type or ""),
+                    "metadata": {
+                        "table": meta.get("table", ""),
+                        "question": meta.get("question", ""),
+                        "sql": meta.get("sql", ""),
+                    },
+                    "score": score,
+                }
+            )
         return results
 
-    # ── Persist / Load ─────────────────────────────────────────────
+    # ── Introspection ──────────────────────────────────────────────
 
-    def save(self, directory: str = STORE_DIR) -> None:
-        os.makedirs(directory, exist_ok=True)
-        faiss.write_index(self.index, os.path.join(directory, "index.faiss"))
-        with open(os.path.join(directory, "documents.json"), "w") as f:
-            json.dump(self.documents, f, indent=2)
+    def count(self) -> int:
+        return self.collection.count()
 
-    def load(self, directory: str = STORE_DIR) -> None:
-        self.index = faiss.read_index(os.path.join(directory, "index.faiss"))
-        with open(os.path.join(directory, "documents.json")) as f:
-            self.documents = json.load(f)
+    @staticmethod
+    def is_ready(persist_dir: str = STORE_DIR) -> bool:
+        """True when a persisted Chroma store already has documents."""
+        if not os.path.isdir(persist_dir):
+            return False
+        try:
+            store = VectorStore(persist_dir=persist_dir)
+            return store.count() > 0
+        except Exception:
+            return False
 
 
 # ── Helper: build schema docs from a live SQLite connection ────────
@@ -128,7 +207,6 @@ def schema_docs_from_db(db_path: str) -> list[dict]:
         if fk_lines:
             description += "\nForeign keys:\n" + "\n".join(fk_lines)
 
-        # Also add sample rows summary for richer retrieval
         cur.execute(f"SELECT COUNT(*) FROM {table}")
         row_count = cur.fetchone()[0]
         description += f"\nRow count: {row_count}"
@@ -145,8 +223,6 @@ def schema_docs_from_db(db_path: str) -> list[dict]:
 
 # ── Helper: build query-history docs ──────────────────────────────
 
-# Seed history: pairs of (natural language question, SQL) that act as
-# few-shot examples and get indexed for retrieval.
 SEED_QUERY_HISTORY = [
     {
         "question": "What are the top 5 best-selling products by revenue?",
@@ -241,22 +317,25 @@ SEED_QUERY_HISTORY = [
 def history_docs() -> list[dict]:
     """Convert seed query history into embeddable documents."""
     docs = []
-    for pair in SEED_QUERY_HISTORY:
+    for i, pair in enumerate(SEED_QUERY_HISTORY):
         text = f"Question: {pair['question']}\nSQL: {pair['sql']}"
         docs.append({
             "text": text,
             "type": "history",
-            "metadata": {"question": pair["question"], "sql": pair["sql"]},
+            "metadata": {
+                "id": f"history::seed::{i}",
+                "question": pair["question"],
+                "sql": pair["sql"],
+            },
         })
     return docs
 
 
 def build_vector_store(db_path: str) -> VectorStore:
-    """One-call helper: build & persist a full vector store."""
+    """One-call helper: rebuild & persist the Chroma collection from scratch."""
     store = VectorStore()
+    store.clear()
     store.add_documents(schema_docs_from_db(db_path))
     store.add_documents(history_docs())
-    store.build_index()
-    store.save()
-    print(f"Vector store built — {len(store.documents)} documents indexed")
+    print(f"Chroma vector store built — {store.count()} documents in '{COLLECTION_NAME}'")
     return store

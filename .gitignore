@@ -1,0 +1,11 @@
+venv/
+.env
+__pycache__/
+*.pyc
+.vector_store/
+.chroma/
+business.db
+eval_results.json
+.DS_Store
+frontend/node_modules/
+frontend/dist/
