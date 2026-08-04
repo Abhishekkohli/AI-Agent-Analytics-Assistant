@@ -26,12 +26,17 @@ User Question (Web UI or CLI)
          └──────┬───────┘
                 ▼
          ┌──────────────┐
+         │ Privacy      │
+         │ guard        │  refuses other people's details
+         └──────┬───────┘
+                ▼
+         ┌──────────────┐
          │ SQLite DB    │
-         │ Execute SQL  │
+         │ Execute SQL  │  (one repair retry on error)
          └──────┬───────┘
                 ▼
          Formatted Results
-         (+ successful Q→SQL pairs → Chroma)
+         (+ successful Q→SQL pairs → Chroma, tagged by user)
 ```
 
 ## Data stores
@@ -39,6 +44,7 @@ User Question (Web UI or CLI)
 | Store | Path | Role |
 |-------|------|------|
 | **SQLite** | `business.db` | Business data (products, orders, customers, …) |
+| **SQLite** | `accounts.db` | Accounts, sessions, per-user question history |
 | **ChromaDB** | `.chroma/` | Vector DB: embeddings + document text + metadata |
 
 Chroma collection `retrieval_docs` schema:
@@ -52,6 +58,7 @@ Chroma collection `retrieval_docs` schema:
 | `table` | metadata | Table name (schema docs) |
 | `question` | metadata | Natural-language question (history) |
 | `sql` | metadata | SQL example (history) |
+| `user_id` | metadata | Owning account, or `""` for shared seed examples |
 
 ## Project structure
 
@@ -67,6 +74,7 @@ AI-Agent-Analytics-Assistant/
 ├── evaluate.py           # Evaluation harness (200+ test queries)
 ├── frontend/             # React (Vite) chat UI
 ├── business.db           # SQLite DB (created on setup)
+├── accounts.db           # Accounts DB (created on first API start)
 ├── .chroma/              # Chroma persistence (created on setup)
 ├── .env.example
 ├── requirements.txt
@@ -122,6 +130,17 @@ Signing up also creates a matching **customer** in `business.db` — a profile p
 its own orders, items, and reviews — so personal questions work right away:
 “How much have I spent?”, “What have I ordered so far?”. The generated history is
 seeded from the email address, so an account always gets the same data back.
+
+**What you can ask**
+
+| | Example |
+|---|---|
+| Your own data | “How much have I spent?”, “Which categories have I never bought from?” |
+| Store-wide aggregates | “Top 5 products by revenue”, “How many orders per city?” |
+| Refused | “Which customers spent over $500?”, “Show me Alice Smith's orders” |
+
+Other shoppers are private. The agent refuses any query that would surface another
+person's name, email, or phone; see the privacy boundary under `sql_agent.py` below.
 
 **API routes**
 
@@ -189,6 +208,9 @@ Default model: `llama-3.3-70b-versatile` (via Groq’s OpenAI-compatible API).
 ### Context manager (`context_manager.py`)
 - Injects the signed-in user's identity so “I / me / my” resolves to their `customers.email`
 - Retrieves top-k relevant schemas and few-shot examples per question
+- Always includes the **full foreign-key map**, since top-k retrieval can miss a table
+  that is only needed as a join hop
+- Prompt rules cover row counts vs. time windows and an anti-join (`NOT EXISTS`) template
 - Builds the system prompt with schema context + similar examples
 - Feedback loop: successful queries are upserted back into Chroma
 
@@ -235,6 +257,9 @@ SQLite (`business.db`) includes:
 - **2,500 orders** with multiple statuses
 - **~8,000+ order items** with line totals
 - **1,800 product reviews** with 1–5 star ratings
+
+Each account that signs up adds one more customer, plus roughly 7 orders and 5 reviews
+of their own.
 
 ## Environment
 
