@@ -45,6 +45,7 @@ class AskResponse(BaseModel):
     rows: list[list[Any]]
     row_count: int
     error: str | None = None
+    blocked: bool = False
 
 
 class SignupRequest(BaseModel):
@@ -278,6 +279,7 @@ def ask(body: AskRequest, user: dict[str, Any] = Depends(current_user)) -> AskRe
         rows=truncated,
         row_count=len(rows),
         error=result["error"],
+        blocked=bool(result.get("blocked")),
     )
 
 

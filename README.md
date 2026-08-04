@@ -193,6 +193,12 @@ Default model: `llama-3.3-70b-versatile` (via Groq’s OpenAI-compatible API).
 - Feedback loop: successful queries are upserted back into Chroma
 
 ### SQL agent (`sql_agent.py`)
+- **Privacy boundary**: a query that surfaces identity columns (`first_name`,
+  `last_name`, `email`, `phone`) from `customers` is refused unless it is pinned to the
+  signed-in email. Aggregates that don't name individuals still run, and results are
+  scanned so another person's email can never come back in a row.
+- Repairs its own SQL once by feeding the database error back to the model
+- Appends `LIMIT n` when the question names a row count and the model omitted it
 - Calls **Groq** with retrieved context to generate SQL
 - Cleans LLM output (strips markdown fences, etc.)
 - Executes SQL against SQLite and returns pandas DataFrames

@@ -19,9 +19,31 @@ business question into a single, correct SQL query.
 Rules:
 - Output ONLY the SQL query, no explanations.
 - Use SQLite-compatible syntax (e.g. strftime for dates).
-- Do NOT use LIMIT unless the user explicitly asks for a specific count.
+- If the question names how many rows it wants ("top 5", "last 3 orders",
+  "3 most recent", "first 10"), you MUST add ORDER BY plus LIMIT <that number>.
+  A time window such as "the last 3 months" is NOT a row count — use a date
+  filter there, not LIMIT.
+- Otherwise do NOT use LIMIT; return every matching row.
 - Always qualify ambiguous column names with table aliases.
-- Use JOINs, not sub-selects, when possible.
+- Only join on the relationships listed below. Never invent a column.
+  order_items connects to customers through orders, never directly.
+- For "not", "never", or "haven't" questions, use NOT EXISTS and put every
+  filter inside the subquery, following this pattern:
+
+    SELECT c.category_name
+    FROM categories c
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM order_items oi
+        JOIN products p   ON p.product_id = oi.product_id
+        JOIN orders o     ON o.order_id = oi.order_id
+        JOIN customers cu ON cu.customer_id = o.customer_id
+        WHERE p.category_id = c.category_id
+          AND cu.email = 'someone@example.com'
+    )
+
+  Never write "WHERE joined.a = X AND joined.b IS NULL" — a row cannot both
+  match the filter and be missing, so that always returns zero rows.
 - Return readable column aliases (e.g. "total_revenue", not "SUM(oi.line_total)").
 - NEVER select or return primary-key / foreign-key id columns
   (e.g. product_id, customer_id, order_id, category_id, review_id, item_id, or plain id).
@@ -32,10 +54,19 @@ Rules:
 class ContextManager:
     """Builds the LLM prompt by injecting retrieved schema + few-shot context."""
 
-    def __init__(self, store: VectorStore, schema_top_k: int = 4, history_top_k: int = 3):
+    def __init__(
+        self,
+        store: VectorStore,
+        schema_top_k: int = 4,
+        history_top_k: int = 3,
+        relationships: str = "",
+    ):
         self.store = store
         self.schema_top_k = schema_top_k
         self.history_top_k = history_top_k
+        # Full foreign-key map; schema retrieval is top-k and can miss a table
+        # that is only needed as a join hop.
+        self.relationships = relationships
 
     def build_prompt(
         self,
@@ -89,6 +120,9 @@ class ContextManager:
         self, schema_ctx: str, history_ctx: str, identity: dict | None = None
     ) -> str:
         parts = [SYSTEM_PROMPT, "=== DATABASE SCHEMA ===", schema_ctx]
+        if self.relationships:
+            parts.append("=== TABLE RELATIONSHIPS ===")
+            parts.append(self.relationships)
         if identity and identity.get("email"):
             parts.append(self._identity_block(identity))
         if history_ctx:
@@ -106,7 +140,10 @@ class ContextManager:
             f"The person asking is {name}, a customer in this database with\n"
             f"email '{email}'.\n"
             "When the question says I, me, my, or mine, restrict the query to that\n"
-            f"customer using customers.email = '{email}'."
+            f"customer using customers.email = '{email}'.\n"
+            "Other shoppers are private: never return another customer's name, email,\n"
+            "or phone. Questions about the wider store must stay aggregated\n"
+            "(counts, totals, averages) rather than naming individual people."
         )
 
     # ── Runtime history injection ──────────────────────────────────

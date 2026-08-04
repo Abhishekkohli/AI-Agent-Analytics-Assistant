@@ -32,7 +32,9 @@ export default function ChatTurn({ turn }) {
           <div className="turn__body">
             {result.error ? (
               <div className="error-banner" role="alert">
-                Couldn’t answer that question. Try rephrasing it.
+                {result.blocked
+                  ? result.error
+                  : 'Couldn’t answer that question. Try rephrasing it.'}
               </div>
             ) : (
               <ResultsTable
