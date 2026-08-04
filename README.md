@@ -129,7 +129,7 @@ Open [http://localhost:5173](http://localhost:5173). Vite proxies `/api` to port
 |-------|------|
 | `/` | **Ask** — chat and answer tables |
 | `/history` | Session question history |
-| `/explore` | Browse SQLite schema |
+| `/explore` | High-level order-management domain diagram |
 | `/about` | How the assistant works |
 
 ### Interactive CLI
