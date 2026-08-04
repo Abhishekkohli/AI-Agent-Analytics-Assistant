@@ -3,27 +3,27 @@ import { useState } from 'react'
 const ENTITIES = {
   categories: {
     label: 'Categories',
-    blurb: 'Product groupings by department (e.g. Tech, Apparel).',
+    blurb: '15 catalog groupings across departments like Tech, Apparel, and Home.',
   },
   products: {
     label: 'Products',
-    blurb: 'Items in the catalog — priced and stocked under a category.',
+    blurb: '175 catalog items — priced and stocked under a category.',
   },
   customers: {
     label: 'Customers',
-    blurb: 'People who place orders and leave product reviews.',
+    blurb: '500 shoppers across 24 US cities who place orders and leave reviews.',
   },
   orders: {
     label: 'Orders',
-    blurb: 'A customer purchase with status and total amount.',
+    blurb: '2,500 purchases with status (pending, shipped, delivered, cancelled).',
   },
   order_items: {
     label: 'Order items',
-    blurb: 'Line items that link an order to the products it contains.',
+    blurb: 'Thousands of line items linking orders to the products they contain.',
   },
   reviews: {
     label: 'Reviews',
-    blurb: 'Star ratings left by customers on products they’ve bought.',
+    blurb: '1,800 star ratings left by customers on products.',
   },
 }
 

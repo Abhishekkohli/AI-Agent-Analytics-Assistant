@@ -194,12 +194,12 @@ Default model: `llama-3.3-70b-versatile` (via Groq’s OpenAI-compatible API).
 
 SQLite (`business.db`) includes:
 
-- **6 categories** across 4 departments
-- **31 products** with prices and stock levels
-- **60 customers** across 12 US cities
-- **400 orders** with multiple statuses
-- **~1240 order items** with line totals
-- **300 product reviews** with 1–5 star ratings
+- **15 categories** across 7 departments
+- **~170+ products** with prices and stock levels
+- **500 customers** across 24 US cities
+- **2,500 orders** with multiple statuses
+- **~8,000+ order items** with line totals
+- **1,800 product reviews** with 1–5 star ratings
 
 ## Environment
 
