@@ -4,37 +4,37 @@ export default function AboutPage() {
       <header className="page__header">
         <div>
           <h1 className="workspace__brand">About</h1>
-          <p className="workspace__sub">How the analytics assistant works</p>
+          <p className="workspace__sub">What this assistant helps you do</p>
         </div>
       </header>
 
       <div className="about-grid">
         <section className="about-block">
-          <h2>1. Ask in English</h2>
+          <h2>Ask everyday questions</h2>
           <p>
-            Type a business question on Ask. Example prompts cover revenue, orders,
-            customers, and reviews.
+            Type questions the way you’d ask a colleague — about sales, products,
+            customers, or reviews — and get a clear answer back.
           </p>
         </section>
         <section className="about-block">
-          <h2>2. Retrieve context</h2>
+          <h2>See results as a table</h2>
           <p>
-            ChromaDB finds related table descriptions and similar past questions so
-            the model knows which tables to use.
+            Answers show up as simple tables you can scan quickly, so you can
+            spot trends without digging through reports.
           </p>
         </section>
         <section className="about-block">
-          <h2>3. Generate & run SQL</h2>
+          <h2>Understand your store</h2>
           <p>
-            Groq writes a SQL query behind the scenes. It runs against the local
-            SQLite e-commerce database — you only see the answer table.
+            Explore how customers, orders, products, and reviews fit together in
+            your sample online store.
           </p>
         </section>
         <section className="about-block">
-          <h2>4. Learn from success</h2>
+          <h2>Come back to past questions</h2>
           <p>
-            Successful questions are saved back into Chroma as few-shot examples,
-            improving later answers in the same environment.
+            History keeps the questions you’ve already asked in this session, so
+            you can reopen or ask them again anytime.
           </p>
         </section>
       </div>

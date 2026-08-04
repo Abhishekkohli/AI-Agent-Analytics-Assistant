@@ -5,7 +5,8 @@ function statusLabel(turn) {
   if (turn.status === 'loading') return 'Running'
   if (turn.status === 'error') return 'Failed'
   if (turn.result?.error) return 'Failed'
-  return `${turn.result?.row_count ?? 0} rows`
+  const n = turn.result?.row_count ?? 0
+  return n === 1 ? '1 result' : `${n} results`
 }
 
 export default function HistoryPage() {
@@ -17,7 +18,7 @@ export default function HistoryPage() {
       <header className="page__header">
         <div>
           <h1 className="workspace__brand">History</h1>
-          <p className="workspace__sub">Questions from this browser session</p>
+          <p className="workspace__sub">Questions you’ve already asked</p>
         </div>
         {turns.length > 0 && (
           <button type="button" className="secondary-btn" onClick={clearHistory}>

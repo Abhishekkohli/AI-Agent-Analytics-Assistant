@@ -7,7 +7,7 @@ const NAV = [
   { to: '/about', label: 'About' },
 ]
 
-export default function Sidebar({ online, model, provider, open, onClose }) {
+export default function Sidebar({ online, open, onClose }) {
   return (
     <aside className={`sidebar ${open ? 'sidebar--open' : ''}`}>
       <div className="sidebar__brand">
@@ -16,7 +16,7 @@ export default function Sidebar({ online, model, provider, open, onClose }) {
         </div>
         <div>
           <p className="brand-name">Analytics Assistant</p>
-          <p className="brand-tag">Ask the business data</p>
+          <p className="brand-tag">Answers about your store</p>
         </div>
         <button type="button" className="sidebar__close" onClick={onClose} aria-label="Close menu">
           ×
@@ -25,9 +25,7 @@ export default function Sidebar({ online, model, provider, open, onClose }) {
 
       <div className="status-pill" data-online={online}>
         <span className="status-pill__dot" />
-        {online
-          ? [provider, model].filter(Boolean).join(' · ') || 'Ready'
-          : 'API offline'}
+        {online ? 'Ready' : 'Unavailable'}
       </div>
 
       <nav className="sidebar__nav" aria-label="Primary">
@@ -45,8 +43,6 @@ export default function Sidebar({ online, model, provider, open, onClose }) {
           </NavLink>
         ))}
       </nav>
-
-      <p className="sidebar__foot">SQLite business data · Chroma retrieval</p>
     </aside>
   )
 }

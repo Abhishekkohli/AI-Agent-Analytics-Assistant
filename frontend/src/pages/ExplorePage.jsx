@@ -3,35 +3,35 @@ import { useState } from 'react'
 const ENTITIES = {
   categories: {
     label: 'Categories',
-    blurb: '15 catalog groupings across departments like Tech, Apparel, and Home.',
+    blurb: 'Groups that organize the catalog, like Tech, Apparel, or Home.',
   },
   products: {
     label: 'Products',
-    blurb: '175 catalog items — priced and stocked under a category.',
+    blurb: 'Things you sell — each one belongs to a category and has a price.',
   },
   customers: {
     label: 'Customers',
-    blurb: '500 shoppers across 24 US cities who place orders and leave reviews.',
+    blurb: 'People who shop with you, place orders, and can leave reviews.',
   },
   orders: {
     label: 'Orders',
-    blurb: '2,500 purchases with status (pending, shipped, delivered, cancelled).',
+    blurb: 'A purchase a customer makes, from pending through delivery.',
   },
   order_items: {
     label: 'Order items',
-    blurb: 'Thousands of line items linking orders to the products they contain.',
+    blurb: 'The individual products inside an order, with quantities.',
   },
   reviews: {
     label: 'Reviews',
-    blurb: '1,800 star ratings left by customers on products.',
+    blurb: 'Star ratings customers leave after buying a product.',
   },
 }
 
 const FLOWS = [
   'A customer places an order.',
-  'Each order is made of order items.',
-  'Order items point at products from the catalog.',
-  'Products belong to categories.',
+  'Each order lists the products that were bought.',
+  'Those products come from your catalog.',
+  'Products are organized into categories.',
   'Customers can also leave reviews on products.',
 ]
 
@@ -45,7 +45,7 @@ export default function ExplorePage() {
         <div>
           <h1 className="workspace__brand">Explore</h1>
           <p className="workspace__sub">
-            High-level view of the order-management domain
+            How the pieces of your store fit together
           </p>
         </div>
       </header>
@@ -152,7 +152,7 @@ export default function ExplorePage() {
 
         <aside className="domain__aside">
           <div className="domain__card">
-            <p className="domain__eyebrow">Selected entity</p>
+            <p className="domain__eyebrow">Selected</p>
             <h2>{selected.label}</h2>
             <p>{selected.blurb}</p>
           </div>

@@ -29,8 +29,8 @@ export default function Composer({ value, onChange, onSubmit, disabled }) {
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Ask a business question in plain English…"
-        aria-label="Business question"
+        placeholder="Ask about your store…"
+        aria-label="Your question"
       />
       <button type="submit" className="send-btn" disabled={disabled || !value.trim()}>
         Ask

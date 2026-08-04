@@ -10,11 +10,11 @@ function formatCell(value) {
 
 export default function ResultsTable({ columns, rows, rowCount }) {
   if (!columns?.length) {
-    return <p className="empty-note">No columns returned.</p>
+    return <p className="empty-note">Nothing to show for that question.</p>
   }
 
   if (!rows?.length) {
-    return <p className="empty-note">Query ran successfully — no matching rows.</p>
+    return <p className="empty-note">No matching results.</p>
   }
 
   const shown = rows.length
@@ -24,7 +24,7 @@ export default function ResultsTable({ columns, rows, rowCount }) {
     <div className="results">
       <div className="results__meta">
         <span>
-          {rowCount.toLocaleString()} row{rowCount === 1 ? '' : 's'}
+          {rowCount.toLocaleString()} result{rowCount === 1 ? '' : 's'}
           {truncated ? ` · showing first ${shown}` : ''}
         </span>
       </div>

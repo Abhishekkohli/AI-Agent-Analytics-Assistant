@@ -21,18 +21,18 @@ export default function AskPage() {
           <h1 id={titleId} className="workspace__brand">
             Ask
           </h1>
-          <p className="workspace__sub">Ask the business database in plain English</p>
+          <p className="workspace__sub">Ask anything about your store</p>
         </div>
       </header>
 
       <div className="feed" ref={feedRef}>
         {turns.length === 0 ? (
           <section className="hero-empty">
-            <p className="hero-empty__eyebrow">E-commerce analytics</p>
+            <p className="hero-empty__eyebrow">Your store at a glance</p>
             <h2 className="hero-empty__title">Analytics Assistant</h2>
             <p className="hero-empty__copy">
-              Ask about products, orders, customers, or reviews. You’ll get a clear
-              answer table — no SQL to dig through.
+              Curious about products, orders, customers, or reviews? Ask in your
+              own words and we’ll show a clear answer.
             </p>
             <div className="hero-empty__prompts">
               {examples.slice(0, 3).map((q) => (

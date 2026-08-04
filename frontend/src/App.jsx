@@ -24,7 +24,7 @@ function AskWithFocus() {
 }
 
 function Shell() {
-  const { online, model, provider } = useChat()
+  const { online } = useChat()
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
@@ -33,8 +33,6 @@ function Shell() {
 
       <Sidebar
         online={online}
-        model={model}
-        provider={provider}
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
       />
