@@ -12,8 +12,8 @@ export default function AboutPage() {
         <section className="about-block">
           <h2>Ask everyday questions</h2>
           <p>
-            Type questions the way you’d ask a colleague — about sales, products,
-            customers, or reviews — and get a clear answer back.
+            Type questions the way you’d ask a colleague about sales, products,
+            customers, or reviews, and get a clear answer back.
           </p>
         </section>
         <section className="about-block">
