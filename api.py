@@ -187,9 +187,15 @@ def me(user: dict[str, Any] = Depends(current_user)) -> UserOut:
 @app.get("/api/health")
 def health() -> dict[str, str]:
     has_key = bool(os.getenv("GROQ_API_KEY"))
+    if _agent is None:
+        return {
+            "status": "missing_api_key" if not has_key else "starting",
+            "model": "",
+            "provider": "groq",
+        }
     return {
         "status": "ok" if has_key else "missing_api_key",
-        "model": get_agent().model,
+        "model": _agent.model,
         "provider": "groq",
     }
 
@@ -294,3 +300,17 @@ def history(user: dict[str, Any] = Depends(current_user)) -> list[HistoryItem]:
 def delete_history(user: dict[str, Any] = Depends(current_user)) -> dict[str, bool]:
     auth.clear_history(user["id"])
     return {"ok": True}
+
+
+# Production (Render / Docker): serve the Vite build from the same origin as /api
+def _mount_frontend() -> None:
+    if os.getenv("SERVE_STATIC", "").lower() not in ("1", "true", "yes"):
+        return
+    from fastapi.staticfiles import StaticFiles
+
+    static_dir = os.path.join(os.path.dirname(__file__), "frontend", "dist")
+    if os.path.isdir(static_dir):
+        app.mount("/", StaticFiles(directory=static_dir, html=True), name="spa")
+
+
+_mount_frontend()
