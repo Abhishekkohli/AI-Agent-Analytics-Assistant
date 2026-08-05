@@ -123,6 +123,8 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173). Vite proxies `/api` to port 8000.
 
+**Production (Oracle Cloud Always Free VM):** see [DEPLOY_ORACLE.md](DEPLOY_ORACLE.md).
+
 On first visit you create an account (name, email, password) or sign in. Every
 question is recorded against the signed-in account.
 
