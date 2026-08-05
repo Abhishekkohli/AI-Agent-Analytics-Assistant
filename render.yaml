@@ -7,8 +7,6 @@ services:
     plan: free
     region: oregon
     healthCheckPath: /api/health
-    # Embedding model load on first boot can take several minutes
-    healthCheckGracePeriod: 900
     envVars:
       - key: SERVE_STATIC
         value: "true"

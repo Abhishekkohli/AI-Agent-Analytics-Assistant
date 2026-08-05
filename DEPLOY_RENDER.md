@@ -72,7 +72,7 @@ Push to `main` on GitHub — Render auto-redeploys if you enabled auto-deploy (d
 | Build fails / out of memory | Retry deploy; if it keeps failing, upgrade to **Starter** ($7/mo) in service **Settings → Instance type**. |
 | **502** after long idle | Normal on free tier — wait ~60s and refresh. |
 | **missing_api_key** | Set `GROQ_API_KEY` in **Environment** and redeploy. |
-| Health check fails on first deploy | Grace period is 900s in `render.yaml`; check logs for pip/model errors. |
+| Health check fails on first deploy | First boot loads embeddings in the Docker build; runtime `/api/health` returns **200** with `"status":"starting"` until the agent finishes. Watch **Logs** for errors. |
 | Lost my account after a week | Expected on free tier after spin-down/redeploy — sign up again. |
 
 ---
